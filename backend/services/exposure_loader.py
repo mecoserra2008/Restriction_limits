@@ -84,23 +84,45 @@ def _norm(s: str) -> str:
 
 
 def _resolve_field_map(columns) -> Dict[str, str]:
-    """Return ``{position_attr: source_column}``."""
+    """
+    Return ``{position_attr: source_column}``.
+
+    Two-pass to avoid the classic collision where a short keyword (``tipo``)
+    matches a longer header (``tipo de linha``) and steals it from the
+    correct attribute. Pass 1 only accepts exact-token matches; pass 2
+    falls back to substring matches but skips any column already claimed.
+    """
     norm_cols = {_norm(c): c for c in columns}
     out: Dict[str, str] = {}
-    for attr, keywords in _FIELD_MAP:
-        for kw in keywords:
-            kwn = _norm(kw)
-            # exact
-            if kwn in norm_cols:
-                out[attr] = norm_cols[kwn]
-                break
-            # fuzzy: keyword present in column name (or vice versa)
-            for n, original in norm_cols.items():
-                if kwn == n or kwn in n.split() or kwn in n:
-                    out[attr] = original
-                    break
+    claimed: set[str] = set()
+
+    def try_match(strict: bool):
+        for attr, keywords in _FIELD_MAP:
             if attr in out:
-                break
+                continue
+            for kw in keywords:
+                kwn = _norm(kw)
+                # exact match always wins
+                if kwn in norm_cols and norm_cols[kwn] not in claimed:
+                    out[attr] = norm_cols[kwn]
+                    claimed.add(norm_cols[kwn])
+                    break
+                if strict:
+                    continue
+                # fuzzy: token equality on word boundaries, then substring
+                for n, original in norm_cols.items():
+                    if original in claimed:
+                        continue
+                    tokens = n.replace("_", " ").split()
+                    if kwn in tokens or kwn in n:
+                        out[attr] = original
+                        claimed.add(original)
+                        break
+                if attr in out:
+                    break
+
+    try_match(strict=True)
+    try_match(strict=False)
     return out
 
 
@@ -109,12 +131,14 @@ def _to_float(x) -> Optional[float]:
         return None
     if isinstance(x, (int, float)):
         return float(x)
-    s = str(x).strip().replace("\xa0", "").replace(" ", "")
+    s = str(x).strip().replace("\xa0", "").replace(" ", "").rstrip("%")
     if not s:
         return None
+    # Portuguese / European thousands+decimal: "1.234.567,89"
     if "," in s and "." in s:
         s = s.replace(".", "").replace(",", ".")
-    elif "," in s and not s.replace(",", "").isdigit() is False:
+    elif "," in s:
+        # Pure "1234,56" -> swap comma for dot
         s = s.replace(",", ".")
     try:
         return float(s)

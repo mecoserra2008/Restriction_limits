@@ -27,13 +27,16 @@ from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from ..models import (
+    AMBER_THRESHOLD,
     Bucket,
     BreachReport,
     ExposureSnapshot,
     LimitRow,
     LimitSnapshot,
     Position,
+    Severity,
 )
+from .normalize import canonical_country, canonical_text
 
 
 def _exposure_value(p: Position) -> float:
@@ -76,17 +79,39 @@ def _matches(pos: Position, key: Dict[str, Optional[str]]) -> bool:
         actual: Optional[str]
         if axis == "Contraparte":
             actual = pos.counterparty
-        elif axis == "País":
-            actual = pos.country
-        elif axis == "Tipo":
+            if canonical_text(actual) != canonical_text(expected):
+                return False
+            continue
+        if axis == "País":
+            if canonical_country(pos.country) != canonical_country(expected):
+                return False
+            continue
+        if axis == "Tipo":
             actual = pos.line_subtype
         elif axis == "Tipo de linha":
             actual = pos.line_type
         else:
             return True  # RAF / unspecified -> always matches
-        if (actual or "").strip().lower() != str(expected).strip().lower():
+        if canonical_text(actual) != canonical_text(expected):
             return False
     return True
+
+
+def _severity(exposure: float, cap: Optional[float]) -> Severity:
+    if cap is None:
+        return "none"
+    if exposure > cap:
+        return "red"
+    if cap > 0 and (exposure / cap) >= AMBER_THRESHOLD:
+        return "amber"
+    return "green"
+
+
+def _is_empty_row(row: LimitRow) -> bool:
+    return all(v is None or v == "" for v in (
+        row.contraparte, row.pais, row.tipo, row.tipo_de_linha,
+        row.limite, row.raf_global, row.raf_individual,
+    ))
 
 
 def build_report(
@@ -95,11 +120,15 @@ def build_report(
 ) -> BreachReport:
     buckets: List[Bucket] = []
     breached = 0
+    amber = 0
     total_exposure = sum(_exposure_value(p) for p in exposures.positions)
-    total_limit = 0.0
+    sum_caps = 0.0
     has_total = False
 
     for row in limits.rows:
+        if _is_empty_row(row):
+            continue
+
         axis, key = _row_axes(row)
         matched = [p for p in exposures.positions if _matches(p, key)]
         exp_value = sum(_exposure_value(p) for p in matched)
@@ -110,14 +139,17 @@ def build_report(
         cap = min(caps) if caps else None
 
         utilization = (exp_value / cap * 100.0) if cap else None
-        is_breach = bool(cap is not None and exp_value > cap)
+        severity = _severity(exp_value, cap)
+        is_breach = severity == "red"
         breach_amount = max(0.0, exp_value - cap) if cap else 0.0
 
         if cap is not None:
-            total_limit += cap
+            sum_caps += cap
             has_total = True
-        if is_breach:
+        if severity == "red":
             breached += 1
+        elif severity == "amber":
+            amber += 1
 
         buckets.append(Bucket(
             axis=axis,            # type: ignore[arg-type]
@@ -125,8 +157,10 @@ def build_report(
             limit=row.limite,
             raf_global=row.raf_global,
             raf_individual=row.raf_individual,
+            effective_cap=cap,
             exposure=exp_value,
             utilization_pct=utilization,
+            severity=severity,
             breached=is_breach,
             breach_amount=breach_amount,
             contributing_positions=len(matched),
@@ -137,8 +171,9 @@ def build_report(
         generated_at=datetime.utcnow(),
         buckets=buckets,
         total_exposure=total_exposure,
-        total_limit=total_limit if has_total else None,
         breached_count=breached,
+        amber_count=amber,
+        sum_effective_caps=sum_caps if has_total else None,
     )
 
 
@@ -146,10 +181,18 @@ def summarise_by_axis(report: BreachReport) -> Dict[str, Dict[str, float]]:
     """Quick roll-up used by the dashboard cards."""
     out: Dict[str, Dict[str, float]] = {}
     for b in report.buckets:
-        bucket = out.setdefault(b.axis, {"exposure": 0.0, "breaches": 0,
-                                         "limits": 0})
+        bucket = out.setdefault(b.axis, {
+            "exposure": 0.0, "limits": 0,
+            "green": 0, "amber": 0, "red": 0, "no_cap": 0,
+        })
         bucket["exposure"] += b.exposure
         bucket["limits"] += 1
-        if b.breached:
-            bucket["breaches"] += 1
+        if b.severity == "red":
+            bucket["red"] += 1
+        elif b.severity == "amber":
+            bucket["amber"] += 1
+        elif b.severity == "green":
+            bucket["green"] += 1
+        else:
+            bucket["no_cap"] += 1
     return out

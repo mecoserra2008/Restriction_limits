@@ -115,6 +115,14 @@ The user wants a clickable icon, no terminal, no VS Code, no Python
 prompts. There are two solid recipes — pick the one that fits the
 restrictions of the target machine.
 
+A ready-to-use **PyInstaller spec** and an **Inno Setup script** are
+shipped under `packaging/`:
+
+```
+packaging/RestrictionLimits.spec   # bundles backend + frontend/dist
+packaging/RestrictionLimits.iss    # per-user installer (no admin)
+```
+
 ### Option A — PyInstaller + bundled web UI (lightest, recommended)
 
 Best when the target laptop already has a modern browser (Edge / Chrome)
@@ -127,17 +135,15 @@ and you can't install Node-based desktop runtimes.
    Copy `frontend/dist` into `backend/static/` (or any path) and mount
    it as shown in §1.3.
 
-2. **Freeze the backend with PyInstaller**:
+2. **Freeze the backend with PyInstaller** (use the shipped spec to keep
+   hidden imports / icons / data files consistent):
    ```bash
    pip install pyinstaller
-   pyinstaller \
-       --name "RestrictionLimits" \
-       --onefile --noconsole \
-       --add-data "backend/static;backend/static" \
-       --icon assets/icon.ico \
-       backend/launcher.py
+   pyinstaller packaging/RestrictionLimits.spec
    ```
-   On Linux/macOS replace the `;` with `:`.
+   The output is `dist/RestrictionLimits.exe`. The spec auto-discovers
+   `frontend/dist/` and bundles it; if absent the binary still runs but
+   `/` will fall back to the FastAPI Swagger UI.
 
 3. The output `dist/RestrictionLimits.exe` is a single `.exe` that, when
    double-clicked:
@@ -146,12 +152,16 @@ and you can't install Node-based desktop runtimes.
    * opens the user's default browser at that URL (see
      `backend/launcher.py`).
 
-4. **Desktop icon (Windows)**: right-click `RestrictionLimits.exe` →
-   *Send to → Desktop (create shortcut)*. The shortcut already shows
-   the icon embedded in the binary. To distribute it preconfigured,
-   ship a `.lnk` next to the `.exe`, or use *Inno Setup* (free,
-   single-file `setup.exe`, no admin rights required for "user-only"
-   installs) to add Start-menu and desktop shortcuts at install time.
+4. **Desktop icon (Windows)**: compile `packaging/RestrictionLimits.iss`
+   with the free *Inno Setup Compiler* — it produces
+   `dist/installer/RestrictionLimits-Setup.exe`. The installer:
+   * runs **without admin rights** (`PrivilegesRequired=lowest`),
+   * places the binary in `%LOCALAPPDATA%\Programs\RestrictionLimits`,
+   * adds Start-menu and desktop shortcuts (the desktop icon is opt-in
+     via the wizard's *Additional icons* page),
+   * launches the app on first install.
+   The user double-clicks the desktop icon — no terminal, no VS Code,
+   no Python prompt.
 
 ### Option B — Tauri (native window, smallest binary, no browser tab)
 

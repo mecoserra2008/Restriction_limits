@@ -33,7 +33,8 @@ exposure .xlsx ►│  exposure_loader       │
 | `backend/models.py` | Pydantic schemas: `LimitRow`, `LimitSnapshot`, `Position`, `ExposureSnapshot`, `Bucket`, `BreachReport`. |
 | `backend/services/limits_loader.py` | Walk the share `M:\Mapas Gestao\Linhas - Risco de Credito\<YYYY>\<MMM>\<DD-MM-YYYY>.xlsx`, parse, normalise, infer date from filename. |
 | `backend/services/exposure_loader.py` | Read the consolidated workbook (Bloomberg metadata + Market Access). Header detection is fuzzy and accent-insensitive. |
-| `backend/services/aggregator.py` | For each limit row: pick its axis (`Contraparte`, `País`, `Tipo`, `Tipo de linha`, `RAF`), match the positions, compare against the tightest cap (`Limite`, `RAF Individual`, `RAF Global`), flag breaches. |
+| `backend/services/aggregator.py` | For each limit row: pick its axis (`Contraparte`, `País`, `Tipo`, `Tipo de linha`, `RAF`), match the positions through `normalize` (so `PT` ≡ `Portugal` ≡ `PRT`), compare against the tightest cap (`Limite`, `RAF Individual`, `RAF Global`), classify severity (`green`/`amber`/`red`/`none`), flag breaches. |
+| `backend/services/normalize.py` | Country / counterparty canonicalisation. Tolerant to ISO-2 / ISO-3 / Portuguese / English names. |
 | `backend/services/bloomberg_client.py` | Optional `pdblp.BCon` wrapper for `ref()` / `bdh()` enrichment. |
 | `backend/services/cache.py` | mtime + TTL cache to avoid reparsing Excel on every request. |
 | `backend/app.py` | FastAPI app + routes + CORS for the React frontend. |
@@ -122,6 +123,51 @@ OpenAPI docs: <http://127.0.0.1:8765/docs>.
 | GET | `/api/limits/latest` | Most recent `LimitSnapshot`. |
 | GET | `/api/limits/{date}` | Snapshot for a given ISO date. |
 | GET | `/api/exposure` | `ExposureSnapshot` from the consolidated workbook. |
-| GET | `/api/report?date=YYYY-MM-DD` | Full `BreachReport`. |
-| GET | `/api/report/summary` | Roll-up by axis (cards on the dashboard). |
+| GET | `/api/report?date=...&axis=País&severity=red&breached_only=true&min_utilization=80` | Filterable `BreachReport`. |
+| GET | `/api/report/summary` | Roll-up by axis (severity counts for the dashboard cards). |
+| GET | `/api/report/timeseries?start=&end=&axis=&key=` | One row per daily file; either headline metrics or one specific bucket's utilisation over time. |
 | POST | `/api/cache/invalidate` | Force Excel re-parse. |
+
+### Severity tiers
+
+The aggregator classifies every bucket on a four-step ladder:
+
+| Tier | Rule |
+| --- | --- |
+| `green` | exposure ≤ 80 % of the effective cap |
+| `amber` | 80 % < exposure ≤ 100 % |
+| `red` (breach) | exposure > 100 % |
+| `none` | the row defines no cap (informational only) |
+
+The threshold lives in `backend/models.py::AMBER_THRESHOLD`.
+
+### Identifier canonicalisation
+
+`normalize.canonical_country` collapses `PT` ≡ `PRT` ≡ `Portugal` ≡
+`portugal` into the same token before comparing. The aliases for the
+common European sovereigns plus US / UK / BR / CH are pre-loaded;
+unknown values fall back to lower-case + accent-strip, so an exact
+typed-in match keeps working. Counterparty / line-type matches use the
+same canonicalisation (`canonical_text`).
+
+### Caveats
+
+* `BreachReport.sum_effective_caps` is a *sum of caps that overlap*
+  (a position counted under Contraparte X may also count under País Y).
+  Surface it as informational only — it is **not** the headroom.
+* The aggregator skips fully-empty rows but keeps rows where some
+  axis fields are populated and no cap is defined (severity `none`).
+* The Bloomberg client is a no-op when `pdblp`/`blpapi` are missing;
+  the dashboard works end-to-end without a terminal because the
+  consolidated workbook already carries the metadata.
+
+## Tests
+
+```bash
+pip install pytest httpx
+python -m pytest backend/tests
+```
+
+The test suite covers normalisation, the field-map collision fix, the
+loaders, the severity ladder, the country alias matching, and the full
+HTTP API (health, dates, report, filters, summary, timeseries).

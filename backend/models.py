@@ -10,7 +10,15 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+# Severity ladder used by the dashboard.
+#   green : utilisation <= 80% of the cap
+#   amber : 80% < utilisation <= 100%
+#   red   : utilisation > 100% (hard breach)
+#   none  : no cap defined for the bucket
+Severity = Literal["green", "amber", "red", "none"]
+AMBER_THRESHOLD = 0.80  # 80% of cap
 
 
 # ---------------------------------------------------------------------------
@@ -50,8 +58,7 @@ class LimitRow(BaseModel):
     raf_individual: Optional[float] = None
     as_of: Optional[date] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class LimitSnapshot(BaseModel):
@@ -116,8 +123,10 @@ class Bucket(BaseModel):
     limit: Optional[float] = None
     raf_global: Optional[float] = None
     raf_individual: Optional[float] = None
+    effective_cap: Optional[float] = None  # min(limit, raf_individual, raf_global)
     exposure: float = 0.0
     utilization_pct: Optional[float] = None
+    severity: Severity = "none"
     breached: bool = False
     breach_amount: float = 0.0
     contributing_positions: int = 0
@@ -128,8 +137,12 @@ class BreachReport(BaseModel):
     generated_at: datetime
     buckets: List[Bucket]
     total_exposure: float
-    total_limit: Optional[float] = None
     breached_count: int
+    amber_count: int = 0
+    # Sum of effective caps - WARNING: caps overlap across axes (a position
+    # counted under Contraparte X may also count under País Y), so this is
+    # *not* the headroom. Surface it as informational only.
+    sum_effective_caps: Optional[float] = None
 
     @classmethod
     def empty(cls, as_of: date) -> "BreachReport":
@@ -139,4 +152,5 @@ class BreachReport(BaseModel):
             buckets=[],
             total_exposure=0.0,
             breached_count=0,
+            amber_count=0,
         )

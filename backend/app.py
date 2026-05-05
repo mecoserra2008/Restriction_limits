@@ -21,13 +21,13 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import SETTINGS
-from .models import BreachReport, ExposureSnapshot, LimitSnapshot
+from .models import BreachReport, Bucket, ExposureSnapshot, LimitSnapshot, Severity
 from .services import aggregator
 from .services.cache import CACHE
 from .services.exposure_loader import load_exposure_file
@@ -128,28 +128,122 @@ def exposure(file: Optional[str] = Query(default=None)):
     return _cached_exposure(path)
 
 
-@app.get("/api/report", response_model=BreachReport)
-def report(target: Optional[date] = Query(default=None, alias="date")):
+def _build_report(target: Optional[date]) -> BreachReport:
     limits = _resolve_limit_snapshot(target)
     expo_path = Path(SETTINGS.exposure_file)
     if not expo_path.exists():
-        # Still useful: return limits-only report with zero exposures
+        # Limits-only report with zero exposures (still useful to inspect caps)
         empty = ExposureSnapshot(as_of=limits.as_of,
                                  source_file=str(expo_path), positions=[])
         return aggregator.build_report(limits, empty)
     return aggregator.build_report(limits, _cached_exposure(expo_path))
 
 
+@app.get("/api/report", response_model=BreachReport)
+def report(
+    target: Optional[date] = Query(default=None, alias="date"),
+    axis: Optional[List[Literal["Contraparte", "País", "Tipo",
+                                "Tipo de linha", "RAF"]]] = Query(default=None),
+    severity: Optional[List[Severity]] = Query(default=None),
+    breached_only: bool = Query(default=False),
+    min_utilization: Optional[float] = Query(default=None,
+                                              description="In percent (0-100+)"),
+):
+    rep = _build_report(target)
+    buckets = rep.buckets
+    if axis:
+        buckets = [b for b in buckets if b.axis in axis]
+    if severity:
+        buckets = [b for b in buckets if b.severity in severity]
+    if breached_only:
+        buckets = [b for b in buckets if b.breached]
+    if min_utilization is not None:
+        buckets = [b for b in buckets
+                   if b.utilization_pct is not None
+                   and b.utilization_pct >= min_utilization]
+
+    if buckets is rep.buckets:
+        return rep
+    # Recount headline metrics on the filtered set so the UI stays honest.
+    return BreachReport(
+        as_of=rep.as_of,
+        generated_at=rep.generated_at,
+        buckets=buckets,
+        total_exposure=rep.total_exposure,
+        breached_count=sum(1 for b in buckets if b.severity == "red"),
+        amber_count=sum(1 for b in buckets if b.severity == "amber"),
+        sum_effective_caps=sum(b.effective_cap or 0 for b in buckets) or None,
+    )
+
+
 @app.get("/api/report/summary")
 def report_summary(target: Optional[date] = Query(default=None, alias="date")):
-    rep = report(target)  # type: ignore[arg-type]
+    rep = _build_report(target)
     return {
         "as_of": rep.as_of.isoformat(),
         "total_exposure": rep.total_exposure,
-        "total_limit": rep.total_limit,
+        "sum_effective_caps": rep.sum_effective_caps,
         "breached_count": rep.breached_count,
+        "amber_count": rep.amber_count,
         "by_axis": aggregator.summarise_by_axis(rep),
     }
+
+
+@app.get("/api/report/timeseries")
+def report_timeseries(
+    start: Optional[date] = Query(default=None),
+    end: Optional[date] = Query(default=None),
+    axis: Optional[Literal["Contraparte", "País", "Tipo",
+                            "Tipo de linha", "RAF"]] = None,
+    key: Optional[str] = Query(
+        default=None,
+        description="JSON of the bucket key, e.g. {\"País\":\"Portugal\"}. "
+                    "If omitted, returns global aggregates per day.",
+    ),
+):
+    """
+    Return one row per available daily limits file with the headline
+    utilisation metrics (or, if ``axis``+``key`` are given, the
+    utilisation of a specific bucket).
+    """
+    import json as _json
+
+    files = discover_files()
+    if not files:
+        return []
+    if start:
+        files = [f for f in files if f[0] >= start]
+    if end:
+        files = [f for f in files if f[0] <= end]
+
+    target_key = _json.loads(key) if key else None
+    out = []
+    for d, _ in files:
+        rep = _build_report(d)
+        if axis is None or target_key is None:
+            out.append({
+                "date": d.isoformat(),
+                "total_exposure": rep.total_exposure,
+                "sum_effective_caps": rep.sum_effective_caps,
+                "breached_count": rep.breached_count,
+                "amber_count": rep.amber_count,
+            })
+            continue
+        match = next(
+            (b for b in rep.buckets
+             if b.axis == axis and all(
+                 (b.key.get(k) or "").lower() == str(v).lower()
+                 for k, v in target_key.items())),
+            None,
+        )
+        out.append({
+            "date": d.isoformat(),
+            "exposure": match.exposure if match else None,
+            "effective_cap": match.effective_cap if match else None,
+            "utilization_pct": match.utilization_pct if match else None,
+            "severity": match.severity if match else "none",
+        })
+    return out
 
 
 @app.post("/api/cache/invalidate")

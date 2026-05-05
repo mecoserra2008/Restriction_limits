@@ -61,7 +61,8 @@ class Settings:
     cors_origins: List[str] = field(
         default_factory=lambda: os.environ.get(
             "RL_CORS_ORIGINS",
-            "http://localhost:5173,http://localhost:3000,tauri://localhost",
+            "http://localhost:5173,http://localhost:3000,"
+            "tauri://localhost,http://tauri.localhost,https://tauri.localhost",
         ).split(",")
     )
 
