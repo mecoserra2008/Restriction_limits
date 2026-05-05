@@ -1,0 +1,27 @@
+Tipo de linha: 
+
+ABS
+Acções/ETFs
+Acções/Derivados (Livro de opções)
+Banca Covered
+Bancos Centrais
+Cambial
+Comodities
+Depósitos/Aplicações
+Dívida Senior Corporate
+Dívida Senior Financeira
+Dívida Subordinada Corporate
+Dívida Subordinada Financeira
+Exposição Máxima Agregada
+Família (excepto CGD)
+Futuros de Taxa de Juro - Cobertura
+Futuros de Taxa de Juro - Trading
+FX
+Garantida Estado
+Governo - BT's
+Governo - OT's
+Governos locais
+Indice
+IRS
+Margens/Colateral
+Papel Comercial
