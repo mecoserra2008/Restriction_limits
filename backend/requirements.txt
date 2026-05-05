@@ -1,0 +1,15 @@
+# Core
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+pandas>=2.0
+openpyxl>=3.1
+python-dateutil>=2.8
+
+# Optional - Bloomberg connectivity (only installable on Windows machines
+# with the Bloomberg Terminal SDK already present).
+# blpapi>=3.19
+# pdblp>=0.1.8
+
+# Optional - desktop packaging
+# pyinstaller>=6.3
