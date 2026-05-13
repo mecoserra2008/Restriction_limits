@@ -1,0 +1,7 @@
+We need 2 separate limits:
+1) Limit by contraparte
+2) Limit by tipo de linha
+
+We need to take the minimum value between the limits and use it as the proxy. 
+Then we need to aggregate for both of the separate limits how much is already booked (being used) and how much is free to still be used. 
+Is this what is being done?
