@@ -1,0 +1,82 @@
+Américo, this error is one of the most common and most annoying Excel PivotTable errors, and the message tells us exactly what is happening:
+
+“Não foi possível concluir a ação… porque iria substituir as células unidas existentes.”  
+Translation: Excel cannot refresh or expand the PivotTable because there are merged cells in the way.
+
+Let me break it down clearly so you know why it happens and what to expect.
+
+🟥 WHY this error happens
+A PivotTable needs to expand when new categories appear (e.g., new “Tipo de Linha” or “Tipo de Contraparte”).
+But Excel cannot expand a PivotTable into merged cells.
+
+Your Dashboard sheet contains merged cells in the layout around the PivotTables — especially in:
+
+Section titles
+
+Decorative headers
+
+Possibly empty rows used for spacing
+
+When the PivotTable tries to refresh and add new rows (because new types appeared), Excel sees merged cells below or next to it and stops with this error.
+
+🟧 WHAT you should expect from this error
+✔ The PivotTable did NOT refresh
+So the dashboard is showing old data.
+
+✔ The PivotTable did NOT expand
+New types (e.g., “Papel Comercial”, “ABS”, “Margens / Colateral”) will not appear.
+
+✔ The macro will continue running, but the dashboard will be wrong
+The macro does not crash — but the dashboard becomes incomplete.
+
+✔ This error will keep happening every month
+Because every month new types may appear, and the PivotTable will try to grow.
+
+🟩 HOW to fix it (the only correct fix)
+You must remove all merged cells in the Dashboard sheet around the PivotTables.
+
+Here is exactly what to do:
+
+✅ Step‑by‑step fix
+1. Go to the Dashboard sheet
+2. Select the entire sheet
+Press:
+
+Código
+Ctrl + A
+3. Unmerge everything
+Home → Alignment → Unmerge Cells
+
+This removes all merged cells in the sheet.
+
+4. Re‑merge ONLY the section titles (optional)
+You can safely re‑merge:
+
+“▌ LIMITES POR TIPO DE LINHA”
+
+“▌ LIMITES POR TIPO DE CONTRAPARTE”
+
+“▌ ANÁLISE RAF — RESTRIÇÃO ATIVA POR CONTRAPARTE”
+
+But do NOT merge any cells below or around the PivotTables.
+
+5. Refresh the PivotTables
+Right‑click → Refresh
+(or run your macro)
+
+Now the PivotTables will expand normally.
+
+🟦 Why this matters for your dashboard
+Your dashboard is now fully dynamic — it depends on PivotTables expanding automatically.
+
+If merged cells block them:
+
+New types will not appear
+
+Totals will be wrong
+
+RAF analysis will be incomplete
+
+The macro will import data but the dashboard will not update
+
+Removing merged cells is mandatory for a dynamic dashboard.
