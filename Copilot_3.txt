@@ -1,0 +1,127 @@
+🛠 How to fix it (step‑by‑step)
+Below are the exact steps to make your dashboard fully dynamic.
+
+I will reference precise cell positions based on your dashboard layout.
+
+🟦 1. Fix “Limites por Tipo de Linha”
+📍 Location in your dashboard
+Starts around cell B20 (header “Tipo de Linha”).
+
+✔ What to do
+Replace the static list with a PivotTable.
+
+🔧 Steps
+Select the block B20:H40 (your current static table).
+
+Press Delete (keep the section title above).
+
+Click cell B21 (first data cell).
+
+Insert → PivotTable → From Table/Range
+
+Table: select the entire Data sheet
+
+Location: Dashboard!B21
+
+Pivot settings:
+
+Rows: Tipo de Linha
+
+Values:
+
+Limite → Sum
+
+Utilizado → Sum
+
+Available Limit → Sum
+
+Effective RAF → Sum
+
+Final Capacity → Sum
+
+% Util:
+
+Right‑click Utilizado → Show Values As → % of Limite
+
+Now the table will automatically show all 19 types.
+
+🟩 2. Fix “Limites por Tipo de Contraparte”
+📍 Location
+Starts around cell B45.
+
+✔ What to do
+Replace static list with a PivotTable.
+
+🔧 Steps
+Select B45:H60 and delete contents.
+
+Click B46.
+
+Insert PivotTable → Location: Dashboard!B46
+
+Pivot settings:
+
+Rows: Tipo
+
+Values:
+
+Limite → Sum
+
+Utilizado → Sum
+
+Available Limit → Sum
+
+Effective RAF → Sum
+
+Final Capacity → Sum
+
+Add % Util as above
+
+Now the table will automatically show all 9 types.
+
+🟧 3. Fix “Análise RAF — Restrição Ativa por Contraparte”
+📍 Location
+Starts around cell B70.
+
+✔ What to do
+Replace static list with a PivotTable.
+
+🔧 Steps
+Select B70:L100 and delete contents.
+
+Click B71.
+
+Insert PivotTable → Location: Dashboard!B71
+
+Pivot settings:
+
+Rows: Contraparte
+
+Values:
+
+Limite
+
+Limite RAF Global
+
+Limite RAF Individual
+
+Effective RAF
+
+Available Limit
+
+Final Capacity
+
+Add a helper column next to the pivot (e.g., column L):
+In L72 enter:
+
+Código
+=IF(H72 < E72, "RAF", "Base")
+(adjust columns based on your pivot layout)
+
+Now the RAF analysis updates automatically.
+
+🎯 Conclusion
+✔ The macro still works
+✔ No conflict with the new file
+✔ Only the dashboard tables must be converted to PivotTables
+✔ After this, everything becomes fully dynamic and future‑proof

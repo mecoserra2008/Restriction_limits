@@ -1,0 +1,65 @@
+What is happening
+The message says (in essence):
+
+“We can’t complete the action for PivotTable_Tipo on sheet Dashboard because there is already a PivotTable ‘PivotTable_RAF’ there. Free up space and try again.”
+
+So:
+
+When the macro runs and does pt.RefreshTable, Excel tries to expand one of the PivotTables (the one named PivotTable_Tipo).
+
+That expansion would make its range overlap the range of another PivotTable on the Dashboard (PivotTable_RAF).
+
+Excel does not allow two PivotTables to overlap, so it throws Run-time error 1004 and stops the macro.
+
+What you should expect from this:
+
+The macro stops at that point.
+
+Some PivotTables may be refreshed, others not.
+
+The dashboard ends up partially updated / inconsistent.
+
+Why this started happening now
+Now that the Data sheet is dynamic and you’re importing real data, some PivotTables (especially:
+
+Limites por Tipo de Linha
+
+Limites por Tipo de Contraparte
+
+Análise RAF
+
+are getting more rows than before (more tipos, mais contrapartes, etc.).
+
+When they grow, they “bump into” each other if they’re placed too close on the Dashboard.
+
+How to fix it (one-time layout fix)
+You don’t need to change the macro.
+You need to give each PivotTable more breathing room on the Dashboard.
+
+1. Identify the three PivotTables
+On the Dashboard sheet:
+
+Click inside the table for Limites por Tipo de Linha → PivotTable Analyze → in the Name box you’ll see something like PivotTable_TipoLinha.
+
+Click inside Limites por Tipo de Contraparte → that’s probably PivotTable_Tipo.
+
+Click inside Análise RAF → that’s PivotTable_RAF.
+
+2. Make sure they don’t overlap now or when they grow
+Do this:
+
+Leave at least 2–3 empty rows between the bottom of one PivotTable and the header of the next block.
+
+If needed, move one PivotTable further down:
+
+Click inside the PivotTable
+
+Press Ctrl + A twice (to select the whole PivotTable)
+
+Cut (Ctrl + X)
+
+Paste (Ctrl + V) into a lower cell (e.g., move Análise RAF further down).
+
+The key rule:
+
+No PivotTable’s range can touch or cross another PivotTable’s range—now or when it expands.

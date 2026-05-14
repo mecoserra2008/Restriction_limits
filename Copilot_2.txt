@@ -1,0 +1,319 @@
+1. Full list of types that should be covered
+Tipo de Linha (from both files)
+From Limites_Credit_Dashboard.xlsx (Data sheet):
+
+Crédito Direto
+
+Garantias
+
+Linhas Standby
+
+Factoring
+
+From 07-04-2026.xlsx (skeleton):
+
+Exposição Máxima Agregada
+
+Dívida Senior Corporate
+
+Dívida Senior Financeira
+
+Dívida Subordinada Financeira
+
+Governos locais
+
+Garantida Estado
+
+Governo - OT's
+
+Governo - BT's
+
+Futuros de Taxa de Juro - Trading
+
+Futuros de Taxa de Juro - Cobertura
+
+Margens / Colateral
+
+Acções / ETFs
+
+Depósitos/Aplicações
+
+ABS
+
+Papel Comercial
+
+So your dashboard should be able to handle at least:
+
+Crédito Direto
+
+Garantias
+
+Linhas Standby
+
+Factoring
+
+Exposição Máxima Agregada
+
+Dívida Senior Corporate
+
+Dívida Senior Financeira
+
+Dívida Subordinada Financeira
+
+Governos locais
+
+Garantida Estado
+
+Governo - OT's
+
+Governo - BT's
+
+Futuros de Taxa de Juro - Trading
+
+Futuros de Taxa de Juro - Cobertura
+
+Margens / Colateral
+
+Acções / ETFs
+
+Depósitos/Aplicações
+
+ABS
+
+Papel Comercial
+
+Tipo (Tipo de Contraparte)
+From Limites_Credit_Dashboard.xlsx:
+
+Bancário
+
+Corporativo
+
+Soberano
+
+Fundos
+
+From 07-04-2026.xlsx:
+
+Soberano
+
+IF
+
+Corporate
+
+RMBS
+
+Portugal (Reg.Aut)
+
+Supra Nacional
+
+Futuros Taxa de Juro
+
+So the union you should consider in the dashboard is:
+
+Bancário
+
+Corporativo / Corporate (mesmo conceito, nomes diferentes)
+
+Soberano
+
+Fundos
+
+IF
+
+RMBS
+
+Portugal (Reg.Aut)
+
+Supra Nacional
+
+Futuros Taxa de Juro
+
+If quiseres, podemos normalizar “Corporate” → “Corporativo” via fórmula ou Power Query, mas por agora o importante é que o dashboard não esteja limitado só a 4 tipos.
+
+2. How to adapt the Dashboard sheet to cover all types
+I’ll assume your Dashboard sheet is structured roughly like this (based on the text you shared):
+
+“Limites por tipo de linha” – a table with rows: Crédito Direto, Garantias, Linhas Standby, Factoring
+
+“Limites por tipo de contraparte” – a table with rows: Bancário, Corporativo, Soberano, Fundos
+
+“Análise RAF — Restrição ativa por contraparte” – a detail table by contraparte
+
+The safest and most future‑proof way is to turn those blocks into PivotTables driven directly from the Data sheet, instead of manually listing fixed rows.
+
+Below I’ll give you step‑by‑step instructions with starting cells—you can adjust the exact cell if your layout is slightly different.
+
+A. Limites por tipo de linha (dynamic, all types)
+Go to the Dashboard sheet.
+
+Locate the block “▌ LIMITES POR TIPO DE LINHA”.
+
+Suppose the header “Tipo de Linha” is currently around cell B15 and the table occupies B15:I20 (adjust to your real range).
+
+Select the whole old table (headers + rows) and clear contents (Delete), but keep the title text above.
+
+Click in the cell where you want the new table to start, e.g. B16.
+
+Go to Insert → PivotTable.
+
+Table/Range: select the full table in Data (including headers).
+
+Choose Existing Worksheet and set Location = Dashboard!B16.
+
+In the PivotTable Fields pane:
+
+Rows: drag Tipo de Linha
+
+Values:
+
+Limite → Sum (rename to “Limite Total”)
+
+Utilizado → Sum (rename to “Utilizado Total”)
+
+Available Limit → Sum (or Min, conforme a tua lógica; rename to “Available Limit”)
+
+Effective RAF → Sum or Min (rename to “Effective RAF”)
+
+Final Capacity → Sum or Min (rename to “Final Capacity”)
+
+To add % Utilização:
+
+Right‑click any value in “Utilizado Total” → Show Values As → % of “Limite Total”
+
+Or create a calculated field:
+
+PivotTable Analyze → Fields, Items & Sets → Calculated Field
+
+Name: % Utilização
+
+Formula: = Utilizado / Limite
+
+Format the PivotTable:
+
+Remove grand totals if you don’t want them.
+
+Apply a clean PivotTable style.
+
+Now every Tipo de Linha that exists in Data (including Exposição Máxima Agregada, Dívida Senior Corporate, etc.) will appear automatically—no need to manually add rows.
+
+B. Limites por tipo de contraparte (Tipo)
+Still on Dashboard, find the block “▌ LIMITES POR TIPO DE CONTRAPARTE”.
+
+Suppose the table is around B25:I30.
+
+Clear the old static table (keep the section title).
+
+Click in the starting cell for the new table, e.g. B26.
+
+Insert another PivotTable from the Data sheet, location Dashboard!B26.
+
+In the PivotTable Fields:
+
+Rows: drag Tipo
+
+Values:
+
+Limite → Sum (“Limite Total”)
+
+Utilizado → Sum (“Utilizado Total”)
+
+Available Limit → Sum/Min
+
+Effective RAF → Sum/Min
+
+Final Capacity → Sum/Min
+
+Add % Utilização as above (calculated field or Show Values As).
+
+Now this table will automatically show:
+
+Bancário
+
+Corporativo / Corporate
+
+Soberano
+
+Fundos
+
+IF
+
+RMBS
+
+Portugal (Reg.Aut)
+
+Supra Nacional
+
+Futuros Taxa de Juro
+
+…sem precisares de mexer no layout sempre que aparece um tipo novo.
+
+C. Análise RAF — Restrição ativa por contraparte
+Here you want a detail view by Contraparte, showing RAF Global, RAF Individual, Effective RAF, Available Limit, Final Capacity, and whether RAF is binding.
+
+On Dashboard, locate “▌ ANÁLISE RAF — RESTRIÇÃO ATIVA POR CONTRAPARTE”.
+
+Suppose the table starts around B35.
+
+Clear the old static rows under the headers (keep the header row text).
+
+Click in the first data cell under the headers, e.g. B36.
+
+Insert a PivotTable from Data, location Dashboard!B36.
+
+In PivotTable Fields:
+
+Rows:
+
+Contraparte
+
+Columns (optional): Tipo de Linha or Tipo, if you want more detail.
+
+Values:
+
+Limite → Sum
+
+Limite RAF Global → Sum
+
+Limite RAF Individual → Sum
+
+Effective RAF → Sum/Min
+
+Available Limit → Sum/Min
+
+Final Capacity → Sum/Min
+
+For “RAF Binding?”, you have two options:
+
+Option 1 – Outside the Pivot:
+
+Next to the pivot (e.g. column H), add a formula like:
+
+excel
+=IF([@[Effective RAF]] < [@[Limite]];"✅ RAF";"⚠ Limite Base")
+(adapt to your actual column letters / structured references)
+
+Option 2 – Calculated Field in Pivot:
+
+PivotTable Analyze → Fields, Items & Sets → Calculated Field
+
+Name: RAF Binding
+
+Formula (conceptual): =IF('Effective RAF' < Limite, 1, 0)
+
+Then format 1/0 with custom text via conditional formatting or helper column.
+
+3. Summary of what you’ll change in the Dashboard sheet
+Limites por tipo de linha
+
+Replace static rows (Crédito Direto, Garantias, Linhas Standby, Factoring) with a PivotTable starting e.g. at B16, using Tipo de Linha as row field.
+
+Limites por tipo de contraparte
+
+Replace static rows (Bancário, Corporativo, Soberano, Fundos) with a PivotTable starting e.g. at B26, using Tipo as row field.
+
+Análise RAF — Restrição ativa por contraparte
+
+Replace static list with a PivotTable starting e.g. at B36, using Contraparte as row field and RAF fields as values.
+
+This way, all existing and future types in the skeleton file are automatically reflected in the dashboard—no manual maintenance, no missing lines.

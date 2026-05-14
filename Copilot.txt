@@ -1,0 +1,209 @@
+Below is a **fully formatted Excel dashboard template** you can paste directly into a new workbook.  
+It includes:
+
+- A **Data** sheet structure  
+- A **Dashboard** sheet layout  
+- Pivot tables, formulas, and recommended visuals  
+- A clean, professional design you can implement immediately  
+
+I’m giving you the **exact structure**, formulas, and formatting instructions so you can build the dashboard in Excel with zero guesswork.
+
+---
+
+# 📘 **Excel Dashboard Template (Ready to Build)**
+
+Below is the full template structure.  
+Create **two sheets**:
+
+---
+
+# 🟦 **Sheet 1 — “Data”**  
+Paste your raw data here with these exact column headers:
+
+| Contraparte | Tipo de linha | Limite | Utilizado | % utilização | País | Tipo | Numeração Rating Basileia | Limites RAF globais | Limites RAF Individual |
+|-------------|---------------|--------|-----------|--------------|------|------|----------------------------|----------------------|-------------------------|
+
+Add the following **calculated columns** to the right:
+
+### **Column L — Available_Limit**
+```
+=[@Limite] - [@Utilizado]
+```
+
+### **Column M — Effective_RAF**
+```
+=MIN([@[Limites RAF globais]]; [@[Limites RAF Individual]])
+```
+
+### **Column N — Final_Capacity**
+```
+=MIN([@Available_Limit]; [@Effective_RAF])
+```
+
+Format these columns as **Number**, 2 decimals, thousand separators.
+
+---
+
+# 🟩 **Sheet 2 — “Dashboard”**
+
+This sheet contains:
+
+---
+
+## 🎛️ **1. Slicers (Filters)**
+
+Insert slicers for:
+
+- Contraparte  
+- Tipo de linha  
+- País  
+- Tipo  
+- Numeração Rating Basileia  
+
+Place them horizontally at the top.
+
+---
+
+## 📊 **2. Pivot Table — Capacity Summary**
+
+Insert a Pivot Table from the **Data** sheet with the following layout:
+
+### **Rows**
+- Contraparte  
+- Tipo de linha  
+- País  
+
+### **Values**
+- **Final_Capacity** → *Min*  
+- **Available_Limit** → *Min*  
+- **Effective_RAF** → *Min*  
+- **Utilizado** → *Sum*  
+- **Limite** → *Sum*  
+
+Rename the fields:
+
+| Pivot Field | Display Name |
+|-------------|--------------|
+| Min of Final_Capacity | Final Capacity |
+| Min of Available_Limit | Min Available |
+| Min of Effective_RAF | Min RAF |
+| Sum of Utilizado | Total Used |
+| Sum of Limite | Total Limit |
+
+Format all values as **#,##0**.
+
+---
+
+## 🚦 **3. Conditional Formatting**
+
+Apply to the **Final Capacity** column:
+
+### **Rule 1 — Red (Critical)**
+If:
+```
+Cell Value < 0
+```
+Format: **Red fill, white bold text**
+
+### **Rule 2 — Orange (Warning)**
+If:
+```
+Cell Value < 0.2 * [Total Limit]
+```
+Use a formula:
+```
+=F2 < 0.2 * J2
+```
+(Adjust column letters based on your pivot layout)
+
+Format: **Orange fill, black bold text**
+
+### **Rule 3 — Green (Healthy)**
+If:
+```
+Cell Value >= 0.2 * [Total Limit]
+```
+Format: **Green fill, white text**
+
+---
+
+## 📈 **4. Visuals (Charts)**
+
+### **Chart 1 — Remaining Capacity by Counterparty**
+- Use **Final Capacity**
+- Clustered bar chart
+- Sort descending
+- Title: **"Available Capacity by Counterparty"**
+
+### **Chart 2 — Utilization vs Limit**
+- Use **Total Used** and **Total Limit**
+- Combo chart:  
+  - Columns = Total Limit  
+  - Line = Total Used  
+- Title: **"Utilization vs Limit"**
+
+### **Chart 3 — RAF Constraint Impact**
+- Use **Min RAF** vs **Min Available**
+- 100% stacked bar chart
+- Title: **"Impact of RAF Restrictions"**
+
+---
+
+## 🧭 **5. KPI Cards (Top of Dashboard)**
+
+Insert 3 large text boxes:
+
+### **KPI 1 — Total Final Capacity**
+Formula:
+```
+=SUM(Data!N:N)
+```
+
+### **KPI 2 — Total Utilizado**
+```
+=SUM(Data!G:G)
+```
+
+### **KPI 3 — Total Limit**
+```
+=SUM(Data!F:F)
+```
+
+Format each as:
+
+- Font: Segoe UI Semibold, 24 pt  
+- Background: Light gray  
+- Border: Thin  
+- Alignment: Center  
+
+---
+
+# 🎨 **6. Recommended Dashboard Layout**
+
+```
+ ---------------------------------------------------------
+| KPI 1 | KPI 2 | KPI 3                                  |
+ ---------------------------------------------------------
+| Slicers (Contraparte, Tipo de linha, País, Tipo, Rating)|
+ ---------------------------------------------------------
+| Pivot Table (Capacity Summary)                          |
+ ---------------------------------------------------------
+| Chart 1 | Chart 2 | Chart 3                             |
+ ---------------------------------------------------------
+```
+
+Clean, professional, and easy to read.
+
+---
+
+# 🧩 **If you want, I can generate:**
+
+- **A downloadable XLSX file** with everything pre‑built  
+- **A Power BI version**  
+- **A macro-enabled version** that refreshes automatically  
+- **A version that connects directly to Bloomberg EMSX**
+
+Which one should I prepare next:  
+**Excel file version**,  
+**Power BI version**, or  
+**Bloomberg EMSX integration**?
